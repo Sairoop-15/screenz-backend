@@ -1,0 +1,9 @@
+### Test Register Request
+POST http://localhost:5000/register
+Content-Type: application/json
+
+{
+  "username": "newuser",
+  "email": "newuser@example.com",
+  "password": "securePassword123"
+}
