@@ -2,7 +2,7 @@ import Video from '../Models/Video.js';
 import User from '../Models/User.js';
 import axios from 'axios';
 
-const API_KEY = 'YOUR_YOUTUBE_API_KEY'; // Replace with a valid key
+const API_KEY =  'AIzaSyCNh536lWro6s49tW2bQ_caiKcVrX1RvU8'; 
 
 const extractVideoDetails = async (videoUrl) => {
   const videoIdMatch = videoUrl.match(/(?:youtube\.com\/.*[?&]v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
