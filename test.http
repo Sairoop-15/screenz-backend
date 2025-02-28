@@ -1,9 +1,17 @@
-### Test Register Request
-POST http://localhost:5000/register
+### ✅ Test Adding a Comment
+POST http://localhost:5000/api/comments/
 Content-Type: application/json
 
 {
-  "username": "newuser",
-  "email": "newuser@example.com",
-  "password": "securePassword123"
+  "videoId": "65ffb23c9a91a6f72b4c7d1a",
+  "userId": "65ffb89e2a91a6f72b4c7d2c",
+  "text": "This is a test comment!"
 }
+
+### ✅ Test Fetching Comments for a Video
+GET http://localhost:5000/api/comments/video/65ffb23c9a91a6f72b4c7d1a
+Accept: application/json
+
+### ❌ Test Fetching Comments with Missing videoId (Should return 400)
+GET http://localhost:5000/api/comments/video/
+Accept: application/json

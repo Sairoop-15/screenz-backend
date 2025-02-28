@@ -2,94 +2,99 @@ import Video from '../Models/Video.js';
 import User from '../Models/User.js';
 import axios from 'axios';
 
-const API_KEY = 'AIzaSyCNh536lWro6s49tW2bQ_caiKcVrX1RvU8'; // Replace with your actual API key
+const API_KEY = 'YOUR_YOUTUBE_API_KEY'; // Replace with a valid key
 
-// Extract details from YouTube video URL
 const extractVideoDetails = async (videoUrl) => {
-  // Extract video ID from URL
-  const videoId = videoUrl.split('v=')[1]?.split('&')[0];
-  
-  if (!videoId) {
-    throw new Error('Invalid YouTube URL');
-  }
+  const videoIdMatch = videoUrl.match(/(?:youtube\.com\/.*[?&]v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  if (!videoIdMatch) throw new Error('Invalid YouTube URL');
 
-  // YouTube API endpoint for video details
+  const videoId = videoIdMatch[1];
   const youtubeUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoId}&key=${API_KEY}`;
+  
   const response = await axios.get(youtubeUrl);
-  
   const videoData = response.data.items[0]?.snippet;
-  
-  if (!videoData) {
-    throw new Error('Failed to fetch video details from YouTube');
-  }
+  if (!videoData) throw new Error('Failed to fetch video details');
 
   return {
+    videoId,
     title: videoData.title,
     description: videoData.description,
     thumbnail: videoData.thumbnails.high.url,
   };
 };
 
-// Create a new video
 const createVideo = async (req, res) => {
   try {
     const { videoUrl, uploadedBy } = req.body;
-
-    // Validate the user exists
     const user = await User.findOne({ username: uploadedBy });
-    if (!user) {
-      return res.status(400).json({ message: 'User not found' });
-    }
+    if (!user) return res.status(404).json({ message: 'User not found' });
 
-    // Extract YouTube video details
-    const { title, description, thumbnail } = await extractVideoDetails(videoUrl);
-
-    // Create a new Video object and save to the database
-    const newVideo = new Video({
-      title,
-      description,
-      videoUrl,
-      uploadedBy: user._id,
-      thumbnail,
-    });
+    const { title, description, thumbnail, videoId } = await extractVideoDetails(videoUrl);
+    const newVideo = new Video({ title, description, videoUrl, videoId, uploadedBy: user._id, thumbnail });
 
     await newVideo.save();
-    return res.status(201).json({ message: 'Video created successfully', video: newVideo });
+    res.status(201).json({ message: 'Video uploaded successfully', video: newVideo });
   } catch (error) {
-    console.error(error); // Log the error for better debugging
-    return res.status(500).json({ message: 'Failed to create video', error: error.message });
+    res.status(500).json({ message: 'Error creating video', error: error.message });
   }
 };
 
-// Get all videos
+const getVideoId = async (req, res) => {
+  try {
+    const { videoUrl } = req.query;
+    if (!videoUrl) {
+      return res.status(400).json({ message: 'Missing videoUrl query parameter' });
+    }
+
+    const video = await Video.findOne({ videoUrl });
+    if (!video) {
+      return res.status(404).json({ message: 'Video not found' });
+    }
+
+    res.json({ _id: video._id });
+  } catch (error) {
+    console.error('Error fetching video:', error);
+    res.status(500).json({ message: 'Error fetching video', error: error.message });
+  }
+};
+
 const getAllVideos = async (req, res) => {
   try {
     const videos = await Video.find().populate('uploadedBy', 'username');
     return res.status(200).json(videos);
   } catch (error) {
-    console.error(error); // Log the error for better debugging
-    return res.status(500).json({ message: 'Failed to fetch videos', error: error.message });
+    return res.status(500).json({ message: 'Error fetching videos', error: error.message });
   }
 };
 
-// Get videos by username
+const getVideoById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const video = await Video.findById(id).populate('uploadedBy', 'username');
+    if (!video) return res.status(404).json({ message: 'Video not found' });
+    return res.status(200).json(video);
+  } catch (error) {
+    return res.status(500).json({ message: 'Error fetching video', error: error.message });
+  }
+};
+
 const getVideosByUser = async (req, res) => {
   try {
     const { username } = req.params;
-
-    // Validate username
     const user = await User.findOne({ username });
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
+    if (!user) return res.status(404).json({ message: 'User not found' });
 
-    // Fetch videos uploaded by the user
     const videos = await Video.find({ uploadedBy: user._id });
     return res.status(200).json(videos);
   } catch (error) {
-    console.error(error); // Log the error for better debugging
-    return res.status(500).json({ message: 'Failed to fetch videos', error: error.message });
+    return res.status(500).json({ message: 'Error fetching videos', error: error.message });
   }
 };
 
-export default { createVideo, getAllVideos, getVideosByUser };
+export default {
+  createVideo,
+  getAllVideos,
+  getVideoById,
+  getVideosByUser,
+  getVideoId
+};
